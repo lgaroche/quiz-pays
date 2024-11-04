@@ -22,6 +22,18 @@ interface ProviderProps extends GameState {
   deserialize: (data: string) => void
 }
 
+const findInList = (list: string[], value: string) => {
+  if (value === '') {
+    return
+  }
+  const normalize = (str: string) => str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ /g, '-')
+    .toLowerCase()
+  return list.find(v => normalize(v).includes(normalize(value)))
+}
+
 const GameContext = createContext<ProviderProps>({
   score: 0,
   currentLetter: 'a',
@@ -52,7 +64,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const code = localStorage.getItem('gameState-code')
-    const countries = new Map(list.map(country => [country.nom.toLowerCase(), country.capitale]))
+    const countries = new Map(list.map(country => [country.nom.toLowerCase(), country.capitale.toLowerCase()]))
     if (code) {
       setSerialized(code)
     }
@@ -94,24 +106,25 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (!currentLetter) {
         return false
       }
-      const guess = country.toLowerCase()
+      const guess = country.toLowerCase().trim()
       if (!guesses.has(guess) && guess.startsWith(currentLetter)) {
-        const c = countries.get(guess.toLowerCase())
-        if (c) {
+        const found = findInList([...countries.keys()], guess)
+        if (found) {
+          console.log(found)
           setScore(score + 1)
-          setGuesses(new Set([...guesses, guess]))
+          setGuesses(new Set([...guesses, found]))
           return true
         }
       }
       return false
     },
     guessCapital: (country: string, capital: string) => {
-      const guess = capital.toLowerCase()
       if (!capitalsFound.has(country)) {
-        const c = countries.get(country).toLowerCase()
-        if (c && c === guess) {
+        const found = findInList([countries.get(country)], capital)
+        if (found) {
+          console.log(found)
           setScore(score + 1)
-          setCapitalsFound(new Map([...capitalsFound, [country, c]]))
+          setCapitalsFound(new Map([...capitalsFound, [country, found]]))
           return true
         }
       }
