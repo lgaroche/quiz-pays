@@ -1,5 +1,6 @@
-import { createContext, useEffect, useState } from 'react'
+import { createContext, useEffect, useState, ReactNode, useMemo } from 'react'
 import list from "./liste"
+import { deserializeState, serializeState } from './seralizer'
 
 interface GameState {
   score: number
@@ -9,14 +10,19 @@ interface GameState {
   countriesLeftRevealed: boolean
   hintedCountries: Set<string>
   capitalsFound: Map<string, string>
+}
+
+interface ProviderProps extends GameState {
   guessCountry: (country: string) => boolean
   guessCapital: (country: string, capital: string) => boolean
   tryNextLetter: () => boolean
   hint: () => void
   reset: () => void
+  serialize: () => string
+  deserialize: (data: string) => void
 }
 
-const GameContext = createContext<GameState>({
+const GameContext = createContext<ProviderProps>({
   score: 0,
   currentLetter: 'a',
   countries: new Map(),
@@ -28,12 +34,13 @@ const GameContext = createContext<GameState>({
   guessCapital: () => false,
   tryNextLetter: () => false,
   hint: () => { },
-  reset: () => { }
+  reset: () => { },
+  serialize: () => '',
+  deserialize: () => { }
 })
 
-import { ReactNode } from 'react';
-
 export const GameProvider = ({ children }: { children: ReactNode }) => {
+  const [serialized, setSerialized] = useState('')
   const [score, setScore] = useState(0)
   const [currentLetter, setCurrentLetter] = useState<string | undefined>('a')
   const [guesses, setGuesses] = useState<Set<string>>(new Set())
@@ -41,40 +48,41 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [countries, setCountries] = useState(new Map())
   const [isRevealed, setIsRevealed] = useState(false)
   const [capitalsFound, setCapitalsFound] = useState(new Map())
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    const state = localStorage.getItem('gameState')
-    console.log(state)
-    if (state) {
-      const { score, currentLetter, guesses, countries, countriesLeftRevealed, hintedCountries, capitalsFound } = JSON.parse(state)
-      setScore(score)
-      setCurrentLetter(currentLetter)
-      setCountries(new Map(countries))
-      setGuesses(new Set(guesses))
-      setIsRevealed(countriesLeftRevealed)
-      setHintedCountries(new Set(hintedCountries))
-      setCapitalsFound(new Map(capitalsFound))
-    } else {
-      const countries = new Map(list.map(country => [country.nom.toLowerCase(), country.capitale]))
-      setCountries(countries)
+    const code = localStorage.getItem('gameState-code')
+    const countries = new Map(list.map(country => [country.nom.toLowerCase(), country.capitale]))
+    if (code) {
+      setSerialized(code)
     }
+    setCountries(countries)
   }, [])
 
   useEffect(() => {
-    if (score > 0) {
-      localStorage.setItem('gameState', JSON.stringify({
-        score,
-        currentLetter,
-        countriesLeftRevealed: isRevealed,
-        guesses: [...guesses],
-        countries: [...countries],
-        hintedCountries: [...hintedCountries],
-        capitalsFound: [...capitalsFound]
-      }))
+    if (!loaded) {
+      return
     }
-  }, [score, currentLetter, guesses, countries, isRevealed, hintedCountries, capitalsFound])
+    const newState = serializeState(currentLetter!, countries, hintedCountries, capitalsFound, guesses, score, isRevealed)
+    setSerialized(newState)
+  }, [score, currentLetter, guesses, isRevealed, hintedCountries, capitalsFound, loaded, countries])
 
-  const gameState = {
+  useEffect(() => {
+    if (!serialized) {
+      return
+    }
+    const { score, currentLetter, foundCountries, countriesLeftRevealed, hintedCountries, foundCapitals } = deserializeState(serialized, countries)
+    setScore(score)
+    setCurrentLetter(currentLetter)
+    setGuesses(new Set(foundCountries))
+    setIsRevealed(countriesLeftRevealed)
+    setHintedCountries(new Set(hintedCountries))
+    setCapitalsFound(new Map(foundCapitals))
+    localStorage.setItem('gameState-code', serialized)
+    setLoaded(true)
+  }, [countries, loaded, serialized])
+
+  const value = useMemo(() => ({
     score,
     currentLetter,
     countries,
@@ -90,13 +98,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (!guesses.has(guess) && guess.startsWith(currentLetter)) {
         const c = countries.get(guess.toLowerCase())
         if (c) {
-          console.log('correct')
           setScore(score + 1)
           setGuesses(new Set([...guesses, guess]))
           return true
         }
       }
-      console.log('wrong')
       return false
     },
     guessCapital: (country: string, capital: string) => {
@@ -104,13 +110,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (!capitalsFound.has(country)) {
         const c = countries.get(country).toLowerCase()
         if (c && c === guess) {
-          console.log(`found ${c}`)
           setScore(score + 1)
           setCapitalsFound(new Map([...capitalsFound, [country, c]]))
           return true
         }
       }
-      console.log(`wrong capital ${guess} for ${country}`)
       return false
     },
     tryNextLetter: () => {
@@ -121,7 +125,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         if (currentLetter < 'z') {
           setCurrentLetter(String.fromCharCode(currentLetter!.charCodeAt(0) + 1))
         } else {
-          console.log("game over")
           setCurrentLetter(undefined)
         }
 
@@ -129,10 +132,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           setScore(score + 2)
         }
         setGuesses(new Set())
+        setHintedCountries(new Set())
+        setCapitalsFound(new Map())
         setIsRevealed(false)
         return true
       }
-      console.log('not all countries found')
       setIsRevealed(true)
       return false
     },
@@ -151,16 +155,18 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }
       const country = [...countries].find(([c]) => c[0] === currentLetter && !guesses.has(c))
       if (country) {
-        console.log(country)
         setScore(score - 1)
         setGuesses(new Set([...guesses, country[0]]))
         setHintedCountries(new Set([...hintedCountries, country[0]]))
       } else {
         setIsRevealed(true)
       }
-    }
-  }
-  return <GameContext.Provider value={gameState}>{children}</GameContext.Provider>
+    },
+    serialize: () => serializeState(currentLetter!, countries, hintedCountries, capitalsFound, guesses, score, isRevealed),
+    deserialize: setSerialized
+  }), [score, currentLetter, countries, guesses, isRevealed, hintedCountries, capitalsFound])
+
+  return <GameContext.Provider value={value}>{children}</GameContext.Provider>
 }
 
 export { GameContext }

@@ -18,7 +18,7 @@ const CountryGuess = ({ country }: { country: string }) => {
   return (
     <div>
       <div
-        className={`p-2 rounded-lg shadow-sm font-semibold text-xl ${hintedCountries.has(country) ? 'bg-orange-200' : 'bg-green-200'}`}
+        className={`p-2 rounded-lg shadow-sm font-semibold text-xl dark:text-black ${hintedCountries.has(country) ? 'bg-orange-200' : 'bg-green-200'}`}
       >
         {
           !guessingCapital ?
