@@ -27,7 +27,10 @@ const Sync = ({ onClose }: { onClose: () => void }) => {
         className="font-semibold text-xl rounded-lg p-1 px-2"
         onChange={(e) => setInput(e.target.value)}
       />
-      <Button onClick={() => deserialize(input)}>Charger</Button >
+      <Button onClick={() => {
+        deserialize(input)
+        onClose()
+      }}>Charger</Button >
       <Button onClick={onClose}>Fermer</Button>
 
     </div>
