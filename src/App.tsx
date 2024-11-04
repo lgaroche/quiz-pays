@@ -24,19 +24,19 @@ function App() {
 
   return (
     <div className='flex flex-col space-y-2'>
-      <h1 className="text-3xl font-bold">
+      <h1 className="text-4xl font-bold mb-5">
         {score}
       </h1>
       {
         currentLetter && <>
-          <div className="flex justify-between">
+          <div className="flex justify-between text-xl">
             <p className='rounded-lg bg-violet-200 px-2 font-bold'>{currentLetter?.toUpperCase()}</p>
-            <p>{numCountriesFound} / {total}</p>
+            <p className='font-semibold'>{numCountriesFound} / {total}</p>
           </div>
           <input
             type='text'
             placeholder='Pays'
-            className='border-2 border-blue-200 rounded-lg p-1 px-2 shadow-sm'
+            className='border-2 border-blue-200 rounded-lg p-1 px-2 shadow-sm text-xl'
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 console.log(e.currentTarget.value)
@@ -52,13 +52,13 @@ function App() {
             ))}
           </div>
           <div className='flex flex-col space-y-1'>
-            <Button onClick={tryNextLetter}>➡️ Lettre suivante</Button>
-            <Button onClick={hint}>😛 Langue au chat</Button>
+            <Button onClick={tryNextLetter}>➡️&nbsp;&nbsp;Lettre suivante</Button>
+            <Button onClick={hint}>😛&nbsp;&nbsp;Langue au chat</Button>
           </div>
         </>
       }
       <div className='flex flex-col pt-5'>
-        <Button onClick={reset} className='bg-red-400'>🔃 Recommencer</Button>
+        <Button onClick={reset} className='bg-red-400'>🔃&nbsp;&nbsp;Recommencer</Button>
       </div>
     </div >
   )

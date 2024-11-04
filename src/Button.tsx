@@ -8,7 +8,7 @@ interface ButtonProps {
 
 const Button = ({ onClick, children, className }: ButtonProps) => {
   return (
-    <button onClick={onClick} className={`bg-blue-400 hover:bg-blue-300 text-white font-bold p-1 rounded-lg ${className}`}>
+    <button onClick={onClick} className={`bg-blue-400 hover:bg-blue-300 text-white font-bold text-xl p-2 rounded-lg ${className}`}>
       {children}
     </button>
   )

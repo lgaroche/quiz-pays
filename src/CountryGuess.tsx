@@ -18,7 +18,7 @@ const CountryGuess = ({ country }: { country: string }) => {
   return (
     <div>
       <div
-        className={`p-1 px-2 rounded-lg shadow-sm font-semibold ${hintedCountries.has(country) ? 'bg-orange-200' : 'bg-green-200'}`}
+        className={`p-2 rounded-lg shadow-sm font-semibold text-xl ${hintedCountries.has(country) ? 'bg-orange-200' : 'bg-green-200'}`}
       >
         {
           !guessingCapital ?
@@ -41,7 +41,7 @@ const CountryGuess = ({ country }: { country: string }) => {
               autoFocus
               type='text'
               placeholder={`Capitale ${country}`}
-              className="bg-transparent"
+              className="bg-transparent text-xl"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   guessCapital(country, e.currentTarget.value)
