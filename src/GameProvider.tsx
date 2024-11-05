@@ -1,28 +1,28 @@
 import { createContext, useEffect, useState, ReactNode, useMemo } from 'react'
-import countries from './countries'
+import { Capital, countries, Country } from './countries'
 import { deserializeState, serializeState } from './seralizer'
 
 export interface GameState {
   score: number
   currentLetter?: string
-  countriesFound: Set<string>
+  countriesFound: Set<Country>
   countriesLeftRevealed: boolean
-  hintedCountries: Set<string>
-  capitalsFound: Map<string, string>
+  hintedCountries: Set<Country>
+  capitalsFound: Map<Country, Capital>
 }
 
 const defaultState: GameState = {
   score: 0,
-  currentLetter: 'a',
-  countriesFound: new Set<string>(),
+  currentLetter: 'A',
+  countriesFound: new Set<Country>(),
   countriesLeftRevealed: false,
-  hintedCountries: new Set<string>(),
+  hintedCountries: new Set<Country>(),
   capitalsFound: new Map()
 }
 
 interface ProviderProps extends GameState {
   guessCountry: (country: string) => boolean
-  guessCapital: (country: string, capital: string) => boolean
+  guessCapital: (country: Country, capital: string) => boolean
   tryNextLetter: () => boolean
   hint: () => void
   reset: () => void
@@ -30,19 +30,12 @@ interface ProviderProps extends GameState {
   deserialize: (data: string) => void
 }
 
-const findInList = (list: string[], value: string) => {
-  if (value === '') {
-    return
-  }
-  const normalize = (str: string) => str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ /g, '-')
+const normalize = (str: string) =>
+  str
     .toLowerCase()
-  console.log(list.map(normalize))
-  console.log(normalize(value))
-  return list.find(v => normalize(v) === normalize(value))
-}
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ /g, "-")
 
 const fromLocalStorage = localStorage.getItem('gameState-code')
 const initialState = fromLocalStorage ? deserializeState(fromLocalStorage) : defaultState
@@ -62,40 +55,45 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState(initialState)
 
   useEffect(() => {
+    console.log(state)
     localStorage.setItem('gameState-code', serializeState(state))
   }, [state])
 
   const value = useMemo(() => ({
     ...state,
-    guessCountry: (country: string) => {
+    guessCountry: (guess: string) => {
       if (!state.currentLetter) {
         return false
       }
-      const guess = country.toLowerCase().trim()
-      if (!state.countriesFound.has(guess) && guess.startsWith(state.currentLetter)) {
-        const found = findInList([...countries.keys()], guess)
+      console.log(guess, state.currentLetter)
+      if (guess.toUpperCase().startsWith(state.currentLetter)) {
+        const found = [...countries.keys()].find(c => normalize(c) === normalize(guess))
+        if (state.countriesFound.has(found as Country)) {
+          return false
+        }
         if (found) {
           console.log(found)
           setState(state => ({
             ...state,
             score: state.score + 1,
             countriesFound: new Set([...state.countriesFound, found])
-          }))
+          }) as GameState)
           return true
         }
       }
       return false
     },
-    guessCapital: (country: string, capital: string) => {
+    guessCapital: (country: Country, guess: string) => {
+      console.log(country, guess)
       if (!state.capitalsFound.has(country)) {
-        const found = findInList([countries.get(country) ?? ''], capital)
+        const capital = countries.get(country)
+        const found = normalize(capital as string) === normalize(guess)
         if (found) {
-          console.log(found)
           setState(state => ({
             ...state,
             score: state.score + 1,
-            capitalsFound: new Map([...state.capitalsFound, [country, found]])
-          }))
+            capitalsFound: new Map([...state.capitalsFound, [country, capital]])
+          }) as GameState)
           return true
         }
       }
@@ -107,7 +105,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         return false
       }
       if ([...countriesFound].length === [...countries.keys()].filter(c => c.startsWith(currentLetter)).length) {
-        const newLetter = currentLetter < 'z' ? String.fromCharCode(currentLetter.charCodeAt(0) + 1) : undefined
+        const newLetter = currentLetter < 'Z' ? String.fromCharCode(currentLetter.charCodeAt(0) + 1) : undefined
         const newScore = countriesLeftRevealed ? state.score : state.score + 2
         setState({
           ...defaultState,
@@ -129,13 +127,16 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (!currentLetter) {
         return
       }
-      const country = [...countries].find(([c]) => c.startsWith(currentLetter) && !countriesFound.has(c))
+
+      const country = [...countries.keys()]
+        .filter(c => c.startsWith(currentLetter))
+        .find(c => !countriesFound.has(c as Country) && !hintedCountries.has(c as Country))
       if (country) {
         setState({
           ...state,
           score: score - 1,
-          countriesFound: new Set([...countriesFound, country[0]]),
-          hintedCountries: new Set([...hintedCountries, country[0]]
+          countriesFound: new Set([...countriesFound, country as Country]),
+          hintedCountries: new Set([...hintedCountries, country as Country]
           )
         })
       } else {

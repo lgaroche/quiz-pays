@@ -1,6 +1,6 @@
 import bs58 from "bs58"
 import { GameState } from "./GameProvider"
-import countries from "./countries"
+import { countries } from "./countries"
 
 export const serializeState = (state: GameState) => {
   const {
@@ -21,6 +21,7 @@ export const serializeState = (state: GameState) => {
   const letterCountries = new Map(
     [...countries].filter(c => c[0].startsWith(currentLetter))
   )
+
   let countriesFoundBitmap = 0
   countriesFound.forEach(country => {
     const countryIndex = [...letterCountries.keys()].indexOf(country)
@@ -43,9 +44,7 @@ export const serializeState = (state: GameState) => {
   // list the capitals that have been found
   let capitalsFoundBitmap = 0
   capitalsFound.forEach(capital => {
-    const capitalIndex = [...letterCountries.values()]
-      .map(c => c.toLowerCase())
-      .indexOf(capital)
+    const capitalIndex = [...letterCountries.values()].indexOf(capital)
     capitalsFoundBitmap |= 1 << capitalIndex
   })
   const capitalsFoundUint32 = new Uint32Array([capitalsFoundBitmap])
@@ -81,9 +80,9 @@ export const deserializeState: (serialized: string) => GameState = (
   const hintedCountries = [...letterCountries.keys()].filter(
     (_, i) => hintedCountriesUint32[0] & (1 << i)
   )
-  const capitalsFound = [...letterCountries.entries()]
-    .map(([country, capital]) => [country, capital.toLowerCase()])
-    .filter((_, i) => capitalsFoundUint32[0] & (1 << i))
+  const capitalsFound = [...letterCountries.entries()].filter(
+    (_, i) => capitalsFoundUint32[0] & (1 << i)
+  )
 
   const isRevealed = (countriesFoundUint32[0] & 0x80000000) !== 0
 
@@ -92,7 +91,7 @@ export const deserializeState: (serialized: string) => GameState = (
     currentLetter: currentLetter_char,
     countriesFound: new Set(countriesFound),
     hintedCountries: new Set(hintedCountries),
-    capitalsFound: new Map(capitalsFound as [string, string][]),
+    capitalsFound: new Map(capitalsFound),
     countriesLeftRevealed: isRevealed,
   }
 }

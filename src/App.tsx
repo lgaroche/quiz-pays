@@ -4,7 +4,7 @@ import { GameContext } from './GameProvider'
 import CountryGuess from './CountryGuess'
 import Button from './Button'
 import Sync from './Sync'
-import countries from './countries'
+import { countries } from './countries'
 
 function App() {
   const {
@@ -18,7 +18,7 @@ function App() {
     reset
   } = useContext(GameContext)
   const numCountriesFound = currentLetter ?
-    [...countriesFound].filter(c => c.startsWith(currentLetter)).length
+    [...countriesFound].filter(c => (c as string).startsWith(currentLetter)).length
     :
     [...countries.keys()].length
 
@@ -40,7 +40,7 @@ function App() {
             {
               currentLetter && <>
                 <div className="flex justify-between text-xl">
-                  <p className='rounded-lg bg-violet-200 px-2 font-bold'>{currentLetter?.toUpperCase()}</p>
+                  <p className='rounded-lg bg-violet-200 dark:text-black px-2 font-bold'>{currentLetter?.toUpperCase()}</p>
                   <p className='font-semibold'>{numCountriesFound} / {total}</p>
                 </div>
                 <input
@@ -57,7 +57,7 @@ function App() {
                   } />
                 <div className='flex flex-col space-y-1'>
                   {[...countriesFound].map((country) => (
-                    <CountryGuess key={country} country={country} />
+                    <CountryGuess key={country as string} country={country} />
                   ))}
                 </div>
                 <div className='flex flex-col space-y-1'>
