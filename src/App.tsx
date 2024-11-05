@@ -4,12 +4,12 @@ import { GameContext } from './GameProvider'
 import CountryGuess from './CountryGuess'
 import Button from './Button'
 import Sync from './Sync'
+import countries from './countries'
 
 function App() {
   const {
     score,
     currentLetter,
-    countries,
     countriesFound,
     countriesLeftRevealed,
     guessCountry,
@@ -17,10 +17,14 @@ function App() {
     hint,
     reset
   } = useContext(GameContext)
-  const numCountriesFound = [...countriesFound].filter(c => c[0] === currentLetter).length
+  const numCountriesFound = currentLetter ?
+    [...countriesFound].filter(c => c.startsWith(currentLetter)).length
+    :
+    [...countries.keys()].length
+
   let total = "?"
-  if (countriesLeftRevealed) {
-    total = ([...countries.keys()].filter(c => c[0] === currentLetter).length).toFixed()
+  if (countriesLeftRevealed && currentLetter) {
+    total = ([...countries.keys()].filter(c => c.startsWith(currentLetter)).length).toFixed()
   }
 
   const [sync, setSync] = useState<boolean>(false)

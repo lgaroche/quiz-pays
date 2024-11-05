@@ -1,15 +1,23 @@
 import { createContext, useEffect, useState, ReactNode, useMemo } from 'react'
-import list from "./liste"
+import countries from './countries'
 import { deserializeState, serializeState } from './seralizer'
 
-interface GameState {
+export interface GameState {
   score: number
   currentLetter?: string
-  countries: Map<string, string>
   countriesFound: Set<string>
   countriesLeftRevealed: boolean
   hintedCountries: Set<string>
   capitalsFound: Map<string, string>
+}
+
+const defaultState: GameState = {
+  score: 0,
+  currentLetter: 'a',
+  countriesFound: new Set<string>(),
+  countriesLeftRevealed: false,
+  hintedCountries: new Set<string>(),
+  capitalsFound: new Map()
 }
 
 interface ProviderProps extends GameState {
@@ -31,17 +39,16 @@ const findInList = (list: string[], value: string) => {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/ /g, '-')
     .toLowerCase()
-  return list.find(v => normalize(v).includes(normalize(value)))
+  console.log(list.map(normalize))
+  console.log(normalize(value))
+  return list.find(v => normalize(v) === normalize(value))
 }
 
+const fromLocalStorage = localStorage.getItem('gameState-code')
+const initialState = fromLocalStorage ? deserializeState(fromLocalStorage) : defaultState
+console.log(initialState)
 const GameContext = createContext<ProviderProps>({
-  score: 0,
-  currentLetter: 'a',
-  countries: new Map(),
-  countriesFound: new Set(),
-  countriesLeftRevealed: false,
-  hintedCountries: new Set(),
-  capitalsFound: new Map(),
+  ...initialState,
   guessCountry: () => false,
   guessCapital: () => false,
   tryNextLetter: () => false,
@@ -52,132 +59,97 @@ const GameContext = createContext<ProviderProps>({
 })
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
-  const [serialized, setSerialized] = useState('')
-  const [score, setScore] = useState(0)
-  const [currentLetter, setCurrentLetter] = useState<string | undefined>('a')
-  const [guesses, setGuesses] = useState<Set<string>>(new Set())
-  const [hintedCountries, setHintedCountries] = useState<Set<string>>(new Set())
-  const [countries, setCountries] = useState(new Map())
-  const [isRevealed, setIsRevealed] = useState(false)
-  const [capitalsFound, setCapitalsFound] = useState(new Map())
-  const [loaded, setLoaded] = useState(false)
+  const [state, setState] = useState(initialState)
 
   useEffect(() => {
-    const code = localStorage.getItem('gameState-code')
-    const countries = new Map(list.map(country => [country.nom.toLowerCase(), country.capitale.toLowerCase()]))
-    if (code) {
-      setSerialized(code)
-    }
-    setCountries(countries)
-  }, [])
-
-  useEffect(() => {
-    if (!loaded) {
-      return
-    }
-    const newState = serializeState(currentLetter!, countries, hintedCountries, capitalsFound, guesses, score, isRevealed)
-    setSerialized(newState)
-  }, [score, currentLetter, guesses, isRevealed, hintedCountries, capitalsFound, loaded, countries])
-
-  useEffect(() => {
-    if (!serialized) {
-      return
-    }
-    const { score, currentLetter, foundCountries, countriesLeftRevealed, hintedCountries, foundCapitals } = deserializeState(serialized, countries)
-    setScore(score)
-    setCurrentLetter(currentLetter)
-    setGuesses(new Set(foundCountries))
-    setIsRevealed(countriesLeftRevealed)
-    setHintedCountries(new Set(hintedCountries))
-    setCapitalsFound(new Map(foundCapitals))
-    localStorage.setItem('gameState-code', serialized)
-    setLoaded(true)
-  }, [countries, loaded, serialized])
+    localStorage.setItem('gameState-code', serializeState(state))
+  }, [state])
 
   const value = useMemo(() => ({
-    score,
-    currentLetter,
-    countries,
-    countriesFound: guesses,
-    countriesLeftRevealed: isRevealed,
-    hintedCountries,
-    capitalsFound,
+    ...state,
     guessCountry: (country: string) => {
-      if (!currentLetter) {
+      if (!state.currentLetter) {
         return false
       }
       const guess = country.toLowerCase().trim()
-      if (!guesses.has(guess) && guess.startsWith(currentLetter)) {
+      if (!state.countriesFound.has(guess) && guess.startsWith(state.currentLetter)) {
         const found = findInList([...countries.keys()], guess)
         if (found) {
           console.log(found)
-          setScore(score + 1)
-          setGuesses(new Set([...guesses, found]))
+          setState(state => ({
+            ...state,
+            score: state.score + 1,
+            countriesFound: new Set([...state.countriesFound, found])
+          }))
           return true
         }
       }
       return false
     },
     guessCapital: (country: string, capital: string) => {
-      if (!capitalsFound.has(country)) {
-        const found = findInList([countries.get(country)], capital)
+      if (!state.capitalsFound.has(country)) {
+        const found = findInList([countries.get(country) ?? ''], capital)
         if (found) {
           console.log(found)
-          setScore(score + 1)
-          setCapitalsFound(new Map([...capitalsFound, [country, found]]))
+          setState(state => ({
+            ...state,
+            score: state.score + 1,
+            capitalsFound: new Map([...state.capitalsFound, [country, found]])
+          }))
           return true
         }
       }
       return false
     },
     tryNextLetter: () => {
+      const { currentLetter, countriesFound, countriesLeftRevealed } = state
       if (!currentLetter) {
         return false
       }
-      if ([...guesses].length === [...countries.keys()].filter(c => c[0] === currentLetter).length) {
-        if (currentLetter < 'z') {
-          setCurrentLetter(String.fromCharCode(currentLetter!.charCodeAt(0) + 1))
-        } else {
-          setCurrentLetter(undefined)
-        }
-
-        if (!isRevealed) {
-          setScore(score + 2)
-        }
-        setGuesses(new Set())
-        setHintedCountries(new Set())
-        setCapitalsFound(new Map())
-        setIsRevealed(false)
+      if ([...countriesFound].length === [...countries.keys()].filter(c => c.startsWith(currentLetter)).length) {
+        const newLetter = currentLetter < 'z' ? String.fromCharCode(currentLetter.charCodeAt(0) + 1) : undefined
+        const newScore = countriesLeftRevealed ? state.score : state.score + 2
+        setState({
+          ...defaultState,
+          score: newScore,
+          currentLetter: newLetter
+        })
         return true
       }
-      setIsRevealed(true)
+
+      setState({ ...state, countriesLeftRevealed: true })
       return false
     },
     reset: () => {
-      setScore(0)
-      setCurrentLetter('a')
-      setGuesses(new Set())
-      setIsRevealed(false)
-      setHintedCountries(new Set())
-      setCapitalsFound(new Map())
+      setState(defaultState)
       localStorage.removeItem('gameState')
     },
     hint: () => {
+      const { currentLetter, score, hintedCountries, countriesFound } = state
       if (!currentLetter) {
         return
       }
-      const country = [...countries].find(([c]) => c[0] === currentLetter && !guesses.has(c))
+      const country = [...countries].find(([c]) => c.startsWith(currentLetter) && !countriesFound.has(c))
       if (country) {
-        setScore(score - 1)
-        setGuesses(new Set([...guesses, country[0]]))
-        setHintedCountries(new Set([...hintedCountries, country[0]]))
+        setState({
+          ...state,
+          score: score - 1,
+          countriesFound: new Set([...countriesFound, country[0]]),
+          hintedCountries: new Set([...hintedCountries, country[0]]
+          )
+        })
       } else {
-        setIsRevealed(true)
+        setState({ ...state, countriesLeftRevealed: true })
       }
     },
-    serialize: () => serializeState(currentLetter!, countries, hintedCountries, capitalsFound, guesses, score, isRevealed),
-    deserialize: setSerialized
-  }), [score, currentLetter, countries, guesses, isRevealed, hintedCountries, capitalsFound])
+    serialize: () => serializeState(state),
+    deserialize: (data: string) => {
+      const state = deserializeState(data)
+      if (state) {
+        setState(state)
+      }
+    }
+  }), [state])
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>
 }
