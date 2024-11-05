@@ -5,6 +5,7 @@ import CountryGuess from './CountryGuess'
 import Button from './Button'
 import Sync from './Sync'
 import { countries } from './countries'
+import { ConfirmableButton } from './ConfirmableButton'
 
 function App() {
   const {
@@ -61,14 +62,14 @@ function App() {
                   ))}
                 </div>
                 <div className='flex flex-col space-y-1'>
-                  <Button onClick={tryNextLetter}>➡️&nbsp;&nbsp;Lettre suivante</Button>
-                  <Button onClick={hint}>😛&nbsp;&nbsp;Langue au chat</Button>
+                  <ConfirmableButton onConfirm={tryNextLetter}>➡️&nbsp;&nbsp;Lettre suivante</ConfirmableButton>
+                  <ConfirmableButton onConfirm={hint}>😛&nbsp;&nbsp;Langue au chat</ConfirmableButton>
                 </div>
               </>
             }
             <div className='flex flex-col pt-5 space-y-1'>
               <Button onClick={() => setSync(true)}>📂&nbsp;&nbsp;Sync</Button>
-              <Button onClick={reset} className='bg-red-400'>🔃&nbsp;&nbsp;Recommencer</Button>
+              <ConfirmableButton onConfirm={reset} className='bg-red-500 hover:bg-red-400'>🔄&nbsp;&nbsp;Reset</ConfirmableButton>
             </div>
           </div >
       }

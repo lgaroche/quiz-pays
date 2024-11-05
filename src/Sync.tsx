@@ -24,7 +24,7 @@ const Sync = ({ onClose }: { onClose: () => void }) => {
         type="text"
         id="sync"
         placeholder="Charger un code"
-        className="font-semibold text-xl rounded-lg p-1 px-2"
+        className="font-semibold text-xl rounded-lg p-1 px-2 border-2 bg-slate-100 dark:bg-slate-800"
         onChange={(e) => setInput(e.target.value)}
       />
       <Button onClick={() => {
