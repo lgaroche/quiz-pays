@@ -49,7 +49,7 @@ function App() {
                   className='border-2 border-blue-200 rounded-lg p-1 px-2 shadow-sm text-xl'
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      if (guessCountry(e.currentTarget.value)) {
+                      if (guessCountry(e.currentTarget.value.trim())) {
                         e.currentTarget.value = ''
                       }
                     }

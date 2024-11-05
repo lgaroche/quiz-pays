@@ -1,4 +1,3 @@
-import capitalize from "capitalize"
 import { useContext, useEffect, useState } from "react"
 import { GameContext } from "./GameProvider"
 import { Country } from "./countries"
@@ -30,22 +29,18 @@ const CountryGuess = ({ country }: { country: Country }) => {
                   setGuessingCapital(true)
                 }
               }}>
-              <div>
-                {country as string}
-              </div>
-              <div>
-                {capital && `${capitalize.words(capital!)}`}
-              </div>
+              <div>{country}</div>
+              <div>{capital && `${capital}`}</div>
             </div>
             :
             <input
               autoFocus
               type='text'
-              placeholder={`Capitale ${country as string}`}
+              placeholder={`Capitale ${country}`}
               className="bg-transparent text-xl"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  guessCapital(country, e.currentTarget.value)
+                  guessCapital(country, e.currentTarget.value.trim())
                   setGuessingCapital(false)
                 }
               }} />
