@@ -6,6 +6,7 @@ import Button from './Button'
 import Sync from './Sync'
 import { countries } from './countries'
 import { ConfirmableButton } from './ConfirmableButton'
+import { normalize } from './seralizer'
 
 function App() {
   const {
@@ -19,13 +20,13 @@ function App() {
     reset
   } = useContext(GameContext)
   const numCountriesFound = currentLetter ?
-    [...countriesFound].filter(c => (c as string).startsWith(currentLetter)).length
+    [...countriesFound].map(normalize).filter(c => (c as string).startsWith(currentLetter)).length
     :
     [...countries.keys()].length
 
   let total = "?"
   if (countriesLeftRevealed && currentLetter) {
-    total = ([...countries.keys()].filter(c => c.startsWith(currentLetter)).length).toFixed()
+    total = ([...countries.keys()].map(normalize).filter(c => c.startsWith(currentLetter)).length).toFixed()
   }
 
   const [sync, setSync] = useState<boolean>(false)

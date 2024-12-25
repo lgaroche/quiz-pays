@@ -2,6 +2,17 @@ import bs58 from "bs58"
 import { GameState } from "./GameProvider"
 import { countries } from "./countries"
 
+export const normalize = (str: string) => {
+  const res = str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace("’", "'")
+    .replace(/ /g, "-")
+  // console.log(`normalize(${str}) = ${res}`)
+  return res
+}
+
 export const serializeState = (state: GameState) => {
   const {
     score,
@@ -19,7 +30,7 @@ export const serializeState = (state: GameState) => {
 
   // list the countries starting with the current letter
   const letterCountries = new Map(
-    [...countries].filter(c => c[0].startsWith(currentLetter))
+    [...countries].filter(c => normalize(c[0]).startsWith(currentLetter))
   )
 
   let countriesFoundBitmap = 0
@@ -71,8 +82,9 @@ export const deserializeState: (serialized: string) => GameState = (
   const hintedCountriesUint32 = new Uint32Array(byteArray.slice(7, 11).buffer)
   const capitalsFoundUint32 = new Uint32Array(byteArray.slice(11, 15).buffer)
 
+  const currentLetter = normalize(currentLetter_char)
   const letterCountries = new Map(
-    [...countries].filter(c => c[0].startsWith(currentLetter_char))
+    [...countries].filter(c => normalize(c[0]).startsWith(currentLetter))
   )
   const countriesFound = [...letterCountries.keys()].filter(
     (_, i) => countriesFoundUint32[0] & 0x7ffffff & (1 << i)
@@ -88,7 +100,7 @@ export const deserializeState: (serialized: string) => GameState = (
 
   return {
     score: score_int16[0],
-    currentLetter: currentLetter_char,
+    currentLetter,
     countriesFound: new Set(countriesFound),
     hintedCountries: new Set(hintedCountries),
     capitalsFound: new Map(capitalsFound),

@@ -1,6 +1,6 @@
 import { createContext, useEffect, useState, ReactNode, useMemo } from 'react'
 import { Capital, countries, Country } from './countries'
-import { deserializeState, serializeState } from './seralizer'
+import { deserializeState, normalize, serializeState } from './seralizer'
 
 export interface GameState {
   score: number
@@ -13,7 +13,7 @@ export interface GameState {
 
 const defaultState: GameState = {
   score: 0,
-  currentLetter: 'A',
+  currentLetter: 'a',
   countriesFound: new Set<Country>(),
   countriesLeftRevealed: false,
   hintedCountries: new Set<Country>(),
@@ -29,13 +29,6 @@ interface ProviderProps extends GameState {
   serialize: () => string
   deserialize: (data: string) => void
 }
-
-const normalize = (str: string) =>
-  str
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ /g, "-")
 
 const fromLocalStorage = localStorage.getItem('gameState-code')
 const initialState = fromLocalStorage ? deserializeState(fromLocalStorage) : defaultState
@@ -66,8 +59,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         return false
       }
       console.log(guess, state.currentLetter)
-      if (guess.toUpperCase().startsWith(state.currentLetter)) {
-        const found = [...countries.keys()].find(c => normalize(c) === normalize(guess))
+      const normalizedGuess = normalize(guess)
+      if (normalizedGuess.startsWith(state.currentLetter)) {
+        const found = [...countries.keys()].find(c => normalize(c) === normalizedGuess)
         if (state.countriesFound.has(found as Country)) {
           return false
         }
@@ -104,8 +98,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (!currentLetter) {
         return false
       }
-      if ([...countriesFound].length === [...countries.keys()].filter(c => c.startsWith(currentLetter)).length) {
-        const newLetter = currentLetter < 'Z' ? String.fromCharCode(currentLetter.charCodeAt(0) + 1) : undefined
+      if ([...countriesFound].length === [...countries.keys()].filter(c => normalize(c).startsWith(currentLetter)).length) {
+        const newLetter = currentLetter < 'z' ? String.fromCharCode(currentLetter.charCodeAt(0) + 1) : undefined
         const newScore = countriesLeftRevealed ? state.score : state.score + 2
         setState({
           ...defaultState,
@@ -129,7 +123,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const country = [...countries.keys()]
-        .filter(c => c.startsWith(currentLetter))
+        .filter(c => normalize(c).startsWith(currentLetter))
         .find(c => !countriesFound.has(c as Country) && !hintedCountries.has(c as Country))
       if (country) {
         setState({
